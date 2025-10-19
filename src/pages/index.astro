@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import sand from "../assets/sand.jpg";
 
 // Color theme configuration
 const COLORS = {
@@ -8,7 +9,7 @@ const COLORS = {
     skyblue: "#4A8BA8",
     camelia: "#A84F7A",
     olive: "#3D4F23",
-} as const;
+};
 
 const DEFAULT_COLOR = COLORS.navy;
 const TRANSITION_DURATION = 900; // milliseconds
@@ -16,34 +17,41 @@ const TRANSITION_DURATION = 900; // milliseconds
 
 <Layout>
     <div
+        class="absolute top-0 left-0 w-full h-full opacity-8 pointer-events-none z-1000"
+        style={{
+            backgroundImage: `url(${sand.src})`,
+            backgroundRepeat: "repeat",
+            backgroundSize: "500px 500px",
+        }}
+        aria-hidden="true"
+    >
+    </div>
+    <div
         id="main-container"
-        class="min-h-lvh text-white relative overflow-hidden will-change-[background-color]"
+        class="min-h-screen text-white overflow-hidden"
         style={`background-color: ${DEFAULT_COLOR}`}
         data-current-color="navy"
     >
         <!-- Transition layer -->
         <div
             id="transition-layer"
-            class="absolute inset-0 pointer-events-none opacity-0 will-change-[clip-path,opacity]"
+            class="absolute inset-0 pointer-events-none opacity-0"
             style="clip-path: circle(0% at 50% 50%);"
         >
         </div>
-
-        <!-- Grain texture overlay - always on top -->
-        <canvas
-            id="grain-canvas"
-            class="absolute inset-0 pointer-events-none opacity-30 z-[100]"
-        ></canvas>
-
         <nav class="p-6 relative z-10" aria-label="Color theme selector">
-            <ul class="flex flex-row gap-6 font-semibold text-xl">
+            <ul
+                class="flex flex-row flex-wrap gap-6 font-semibold text-xl justify-center sm:justify-start"
+            >
                 {
                     Object.keys(COLORS).map((colorKey) => (
                         <li>
                             <button
                                 class="cursor-pointer capitalize hover:opacity-80 transition-all focus-visible:outline-none focus-visible:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] px-2 py-1"
                                 data-color={colorKey}
-                                aria-pressed={colorKey === "navy" ? "true" : "false"}
+                                aria-pressed={
+                                    colorKey === "navy" ? "true" : "false"
+                                }
                                 aria-label={`Change theme to ${colorKey}`}
                             >
                                 {colorKey}
@@ -90,7 +98,7 @@ const TRANSITION_DURATION = 900; // milliseconds
             transitionLayer.style.opacity = "0";
             transitionLayer.style.clipPath = "circle(0% at 50% 50%)";
             isAnimating = false;
-        }, TRANSITION_DURATION + 50);
+        }, TRANSITION_DURATION);
     };
 
     /**
@@ -101,7 +109,7 @@ const TRANSITION_DURATION = 900; // milliseconds
         colorButtons.forEach((button) => {
             const buttonColorKey = button.getAttribute("data-color");
             const isActive = buttonColorKey === activeColorKey;
-            
+
             // Update ARIA state
             button.setAttribute("aria-pressed", isActive ? "true" : "false");
         });
@@ -125,7 +133,7 @@ const TRANSITION_DURATION = 900; // milliseconds
         // Update state
         isAnimating = true;
         container.setAttribute("data-current-color", colorKey);
-        
+
         // Update ARIA states
         updateActiveStates(colorKey);
 
@@ -145,44 +153,6 @@ const TRANSITION_DURATION = 900; // milliseconds
                     changeColor(colorKey);
                 }
             });
-        });
-
-        // Generate grain texture
-        generateGrainTexture();
-    };
-
-    /**
-     * Generate visible grain texture on canvas
-     */
-    const generateGrainTexture = () => {
-        const canvas = document.getElementById("grain-canvas");
-        if (!canvas) return;
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        const imageData = ctx.createImageData(canvas.width, canvas.height);
-        const pixels = imageData.data;
-
-        // Generate random noise
-        for (let i = 0; i < pixels.length; i += 4) {
-            const noise = Math.random() * 255;
-            pixels[i] = noise; // R
-            pixels[i + 1] = noise; // G
-            pixels[i + 2] = noise; // B
-            pixels[i + 3] = 80; // A (opacity)
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-
-        // Regenerate on resize
-        window.addEventListener("resize", () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            generateGrainTexture();
         });
     };
 
