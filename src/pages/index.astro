@@ -1,11 +1,169 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// Color theme configuration
+const COLORS = {
+    navy: "#001f3f",
+    orange: "#C85A1F",
+    skyblue: "#4A8BA8",
+    camelia: "#A84F7A",
+    olive: "#3D4F23",
+} as const;
+
+const DEFAULT_COLOR = COLORS.navy;
+const TRANSITION_DURATION = 900; // milliseconds
 ---
 
 <Layout>
-	<Welcome />
+    <div
+        id="main-container"
+        class="min-h-lvh text-white relative overflow-hidden will-change-[background-color]"
+        style={`background-color: ${DEFAULT_COLOR}`}
+        data-current-color="navy"
+    >
+        <!-- Transition layer -->
+        <div
+            id="transition-layer"
+            class="absolute inset-0 pointer-events-none opacity-0 will-change-[clip-path,opacity]"
+            style="clip-path: circle(0% at 50% 50%);"
+        >
+        </div>
+
+        <!-- Grain texture overlay - always on top -->
+        <canvas
+            id="grain-canvas"
+            class="absolute inset-0 pointer-events-none opacity-30 z-[100]"
+        ></canvas>
+
+        <nav class="p-6 relative z-10">
+            <ul class="flex flex-row gap-6 font-semibold text-xl">
+                {
+                    Object.keys(COLORS).map((colorKey) => (
+                        <li
+                            class="cursor-pointer hover:opacity-80 transition-opacity capitalize"
+                            data-color={colorKey}
+                        >
+                            {colorKey}
+                        </li>
+                    ))
+                }
+            </ul>
+        </nav>
+    </div>
 </Layout>
+
+<script define:vars={{ COLORS, TRANSITION_DURATION }}>
+    // DOM elements
+    const container = document.getElementById("main-container");
+    const transitionLayer = document.getElementById("transition-layer");
+    const colorButtons = document.querySelectorAll("[data-color]");
+
+    // Animation state
+    let isAnimating = false;
+
+    /**
+     * Circle expand transition effect
+     * Expands a circular mask from center to reveal new color
+     */
+    const circleExpandTransition = (newColor) => {
+        if (!container || !transitionLayer) return;
+
+        // Prepare transition layer
+        transitionLayer.style.backgroundColor = newColor;
+        transitionLayer.style.clipPath = "circle(0% at 50% 50%)";
+        transitionLayer.style.opacity = "1";
+
+        // Trigger transition on next frame
+        requestAnimationFrame(() => {
+            transitionLayer.style.transition = `clip-path ${TRANSITION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            transitionLayer.style.clipPath = "circle(150% at 50% 50%)";
+        });
+
+        // Complete transition
+        setTimeout(() => {
+            container.style.backgroundColor = newColor;
+            transitionLayer.style.transition = "none";
+            transitionLayer.style.opacity = "0";
+            transitionLayer.style.clipPath = "circle(0% at 50% 50%)";
+            isAnimating = false;
+        }, TRANSITION_DURATION + 50);
+    };
+
+    /**
+     * Handles color change with validation
+     */
+    const changeColor = (colorKey) => {
+        if (!container) return;
+
+        // Get current color
+        const currentColor = container.getAttribute("data-current-color");
+
+        // Skip if same color or animating
+        if (currentColor === colorKey || isAnimating) return;
+
+        const newColor = COLORS[colorKey];
+        if (!newColor) return;
+
+        // Update state
+        isAnimating = true;
+        container.setAttribute("data-current-color", colorKey);
+
+        // Execute transition
+        circleExpandTransition(newColor);
+    };
+
+    /**
+     * Initialize color switcher event listeners
+     */
+    const init = () => {
+        colorButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const colorKey = button.getAttribute("data-color");
+                if (colorKey) {
+                    changeColor(colorKey);
+                }
+            });
+        });
+
+        // Generate grain texture
+        generateGrainTexture();
+    };
+
+    /**
+     * Generate visible grain texture on canvas
+     */
+    const generateGrainTexture = () => {
+        const canvas = document.getElementById("grain-canvas");
+        if (!canvas) return;
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        const pixels = imageData.data;
+
+        // Generate random noise
+        for (let i = 0; i < pixels.length; i += 4) {
+            const noise = Math.random() * 255;
+            pixels[i] = noise; // R
+            pixels[i + 1] = noise; // G
+            pixels[i + 2] = noise; // B
+            pixels[i + 3] = 80; // A (opacity)
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        // Regenerate on resize
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            generateGrainTexture();
+        });
+    };
+
+    // Start application
+    init();
+</script>
