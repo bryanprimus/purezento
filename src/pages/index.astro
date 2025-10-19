@@ -35,15 +35,19 @@ const TRANSITION_DURATION = 900; // milliseconds
             class="absolute inset-0 pointer-events-none opacity-30 z-[100]"
         ></canvas>
 
-        <nav class="p-6 relative z-10">
+        <nav class="p-6 relative z-10" aria-label="Color theme selector">
             <ul class="flex flex-row gap-6 font-semibold text-xl">
                 {
                     Object.keys(COLORS).map((colorKey) => (
-                        <li
-                            class="cursor-pointer hover:opacity-80 transition-opacity capitalize"
-                            data-color={colorKey}
-                        >
-                            {colorKey}
+                        <li>
+                            <button
+                                class="cursor-pointer capitalize hover:opacity-80 transition-all focus-visible:outline-none focus-visible:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] px-2 py-1"
+                                data-color={colorKey}
+                                aria-pressed={colorKey === "navy" ? "true" : "false"}
+                                aria-label={`Change theme to ${colorKey}`}
+                            >
+                                {colorKey}
+                            </button>
                         </li>
                     ))
                 }
@@ -90,6 +94,20 @@ const TRANSITION_DURATION = 900; // milliseconds
     };
 
     /**
+     * Update ARIA pressed states
+     * for a11y only
+     */
+    const updateActiveStates = (activeColorKey) => {
+        colorButtons.forEach((button) => {
+            const buttonColorKey = button.getAttribute("data-color");
+            const isActive = buttonColorKey === activeColorKey;
+            
+            // Update ARIA state
+            button.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+    };
+
+    /**
      * Handles color change with validation
      */
     const changeColor = (colorKey) => {
@@ -107,6 +125,9 @@ const TRANSITION_DURATION = 900; // milliseconds
         // Update state
         isAnimating = true;
         container.setAttribute("data-current-color", colorKey);
+        
+        // Update ARIA states
+        updateActiveStates(colorKey);
 
         // Execute transition
         circleExpandTransition(newColor);
@@ -117,6 +138,7 @@ const TRANSITION_DURATION = 900; // milliseconds
      */
     const init = () => {
         colorButtons.forEach((button) => {
+            // Click handler
             button.addEventListener("click", () => {
                 const colorKey = button.getAttribute("data-color");
                 if (colorKey) {
